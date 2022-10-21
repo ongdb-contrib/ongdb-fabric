@@ -36,6 +36,15 @@ CALL c(
     'MATCH (n) RETURN n LIMIT 10;'
 ) YIELD value RETURN value
 ```
+```sql
+CALL c(
+    c.ids(),
+    '
+    RETURN \'Fabric hello world!\' AS `hi~`
+    '
+) YIELD value
+RETURN value.`hi~` AS `hi~`
+```
 
 ### 区分服务ID查询
 ```sql

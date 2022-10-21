@@ -49,8 +49,11 @@ public class Procedures {
     @Context
     public Log log;
 
+    @Context
+    public TerminationGuard terminationGuard;
+
     /**
-     * @param cId:服务ID
+     * @param cIds:服务ID
      * @param statement:查询
      * @param params:查询入参
      * @param config:Bolt驱动配置
@@ -59,7 +62,26 @@ public class Procedures {
      */
     @Procedure(name = "c", mode = Mode.READ)
     @Description("Fabric c")
-    public Stream<MapResult> c(@Name("cId") String cId, @Name("statement") String statement, @Name(value = "params", defaultValue = "{}") Map<String, Object> params, @Name(value = "config", defaultValue = "{}") Map<String, Object> config) throws Exception {
+    public Stream<MapResult> c(@Name("cIds") Object cIds, @Name("statement") String statement, @Name(value = "params", defaultValue = "{}") Map<String, Object> params, @Name(value = "config", defaultValue = "{}") Map<String, Object> config) throws Exception {
+        if (cIds instanceof ArrayList) {
+            ArrayList<Object> coll = (ArrayList<Object>) cIds;
+            return coll.parallelStream().flatMap((cId) -> {
+                terminationGuard.check();
+                try {
+                    return cSingle(String.valueOf(cId), statement, params, config);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+                return Stream.of();
+            });
+        } else if (cIds instanceof String) {
+            return cSingle(String.valueOf(cIds), statement, params, config);
+        } else {
+            throw new IllegalAccessError("C id must be STRING or LIST!");
+        }
+    }
+
+    public Stream<MapResult> cSingle(@Name("cId") String cId, @Name("statement") String statement, @Name(value = "params", defaultValue = "{}") Map<String, Object> params, @Name(value = "config", defaultValue = "{}") Map<String, Object> config) throws Exception {
         if (params == null) {
             params = Collections.emptyMap();
         }
